@@ -106,12 +106,12 @@ fn expand(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             let struct_ident = &input.ident;
             Ok(quote! {
                 impl #impl_generics #struct_ident #type_generics #where_clause {
-                    pub fn new(#(#sized_parameters,)* #dynamic_name: &std::mem::ManuallyDrop<#dynamic_type>) -> Box<Self>{
+                    pub fn new(#(#sized_parameters,)* #dynamic_name: dyn_struct2::dyn_arg::DynArg<#dynamic_type>) -> Box<Self>{
                         #single_definition
 
                         let header: #single #type_generics = #single_init;
 
-                        let dyn_struct = dyn_struct::DynStruct::new(header, #dynamic_name);
+                        let dyn_struct = dyn_struct2::DynStruct::new(header, #dynamic_name);
                         unsafe { dyn_struct.transmute() }
                     }
                 }

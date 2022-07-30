@@ -46,7 +46,6 @@ impl<T: ?Sized> DynArg<T> {
 
 impl<T: Unsize<U> + ?Sized, U: ?Sized> CoerceUnsized<DynArg<U>> for DynArg<T> {}
 
-
 /// Safe way to construct [DynArg] from a stack value it consumes the input
 pub macro dyn_arg($($input:tt)*) { {
     let val = $($input)*;

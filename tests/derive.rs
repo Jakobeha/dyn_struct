@@ -1,5 +1,5 @@
-
-use dyn_struct_derive::DynStruct;
+use dyn_struct2::dyn_arg::dyn_arg;
+use dyn_struct_derive2::DynStruct;
 
 #[test]
 fn custom() {
@@ -10,7 +10,7 @@ fn custom() {
         pub values: [u32],
     }
 
-    let foo = Foo::new(14, vec![1, 2, 3, 4]);
+    let foo = Foo::new(14, dyn_arg!([1, 2, 3, 4]));
     assert_eq!(foo.inner, 14);
     assert_eq!(&foo.values, [1, 2, 3, 4]);
 }
@@ -25,7 +25,7 @@ fn generic() {
         pub values: [U],
     }
 
-    let foo = Foo::new(true, "hello", [1, 2, 3, 4]);
+    let foo = Foo::new(true, "hello", dyn_arg!([1, 2, 3, 4]));
     assert_eq!(foo.inner, true);
     assert_eq!(foo.text, "hello");
     assert_eq!(&foo.values, [1, 2, 3, 4]);
@@ -41,7 +41,7 @@ fn readme() {
         pub dynamic: [u32],
     }
 
-    let foo: Box<MyDynamicType> = MyDynamicType::new(true, 123, 4..8);
+    let foo: Box<MyDynamicType> = MyDynamicType::new(true, 123, dyn_arg!([4, 5, 6, 7, 8]));
     assert_eq!(foo.awesome, true);
     assert_eq!(foo.number, 123);
     assert_eq!(&foo.dynamic, &[4, 5, 6, 7]);
