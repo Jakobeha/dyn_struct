@@ -1,4 +1,4 @@
-#![doc(include = "README.md")]
+#![doc = include_str!("../README.md")]
 
 #![feature(ptr_metadata)]
 #![feature(decl_macro)]
