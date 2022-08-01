@@ -106,7 +106,7 @@ fn expand(input: syn::DeriveInput) -> syn::Result<TokenStream> {
             let struct_ident = &input.ident;
             Ok(quote! {
                 impl #impl_generics #struct_ident #type_generics #where_clause {
-                    pub fn new(#(#sized_parameters,)* #dynamic_name: dyn_struct2::dyn_arg::DynArg<#dynamic_type>) -> Box<Self>{
+                    pub fn new(#(#sized_parameters,)* #dynamic_name: dyn_struct2::DynArg<#dynamic_type>) -> Box<Self>{
                         #single_definition
 
                         let header: #single #type_generics = #single_init;

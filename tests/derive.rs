@@ -1,4 +1,4 @@
-use dyn_struct2::dyn_arg::dyn_arg;
+use dyn_struct2::dyn_arg;
 use dyn_struct_derive2::DynStruct;
 
 #[test]
@@ -44,6 +44,6 @@ fn readme() {
     let foo: Box<MyDynamicType> = MyDynamicType::new(true, 123, dyn_arg!([4, 5, 6, 7, 8]));
     assert_eq!(foo.awesome, true);
     assert_eq!(foo.number, 123);
-    assert_eq!(&foo.dynamic, &[4, 5, 6, 7]);
+    assert_eq!(&foo.dynamic, &[4, 5, 6, 7, 8]);
 }
 

@@ -9,7 +9,7 @@ This crate allows you to initialize Dynamically Sized Types (DST) using only saf
 
 ```rust
 // Helpers for gritty details
-use dyn_struct2::DynStruct;
+use dyn_struct2::{DynStruct, dyn_arg};
 // Automatic #[derive] proc macro
 use dyn_struct_derive2::{DynStruct as DynStructDerive};
 
@@ -46,7 +46,7 @@ fn example() {
 In Rust, Dynamically Sized Types (DST) are everywhere. Slices (`[T]`) and trait
 objects (`dyn Trait`) are the most common ones. However, it is also possible
 to define your own! For example, this can be done by letting the last field in a
-struct be a dynamically sized array (note the missing `&`):
+struct be a DST:
 
 ```rust
 struct MyDynamicType {
@@ -56,29 +56,21 @@ struct MyDynamicType {
 }
 ```
 
-This tells the Rust compiler that contents of the `dynamic`-array is laid out in
-memory right after the other fields. This can be very preferable in some cases,
-since remove one level of indirection and increase cache-locality.
+This tells the Rust compiler that contents of the DST are laid out in memory right after the other fields, and a pointer to `MyDynamicType` will be a fat pointer with the same metadata as the DST. This can be very preferable in some cases, since it removes one level of indirection and increases cache-locality.
 
-However, there's a catch! Just as with slices, the compiler does not know how
-many elements are in `dynamic`. Thus, we need what is called a fat-pointer which
-stores both a pointer to the actual data, but also the length of the array
-itself. As of releasing this crate, the only safe way to construct a dynamic
-type is if we know the size of the array at compile-time. However, for most use
-cases, that is not possible. Therefore this crate uses some `unsafe` behind the
-scenes to work around the limitations of the language, all wrapped up in a safe
-interface.
-
+However, there's a catch! Just as with slices, the compiler does not know how the size of `dynamic`. Thus, we need what is called a fat-pointer which  stores both a pointer to the actual data, but also the size of the DST itself (and additional metadata, e.g. if it's a `dyn` the vtable). Rust's built-in support for DSTs is lacking, and there are no safe ways to construct these DSTs, as you can't actually pass unsized types to a constructor or function parameter. This crate uses some `unsafe` behind the scenes to work around the limitations of the language, all wrapped up in a safe interface.
 
 ## The Derive Macro
 
 The `DynStruct` macro can be applied to any `#[repr(C)]` struct that contains a
-dynamically sized array as its last field. Fields only have a single constraint:
-they have to implement `Copy`.
+dynamically sized array as its last field.
 
 ### Example
 
 ```rust
+#![cfg(feature = "derive")]
+use dyn_struct2::DynStruct;
+
 #[repr(C)]
 #[derive(DynStruct)]
 struct MyDynamicType {
@@ -88,22 +80,65 @@ struct MyDynamicType {
 }
 ```
 
-will produce a single `impl`-block with a `new` function. This function accepts all fileds in
-the same order they were declared. The last field, however, can be anything implementing
-`IntoIterator`:
+will produce a single `impl`-block with a `new` function. This function accepts all fields in
+the same order they were declared. The last field, however, must be a `DynArg`:
 
 ```rust
+# use dyn_struct2::DynArg;
+#
+# #[repr(C)]
+# struct MyDynamicType {
+#     pub awesome: bool,
+#     pub number: u32,
+#     pub dynamic: [u32],
+# }
+
 impl MyDynamicType {
-    pub fn new<I>(awesome: bool, number: u32, dynamic: I) -> Box<MyDynamicType> 
-        where I: IntoIterator<Item = u32>,
-              I::IntoIter: ExactSizeIterator,
-    {
+    pub fn new(awesome: bool, number: u32, dynamic: DynArg<[u32]>) -> Box<MyDynamicType> {
         // ... implementation details ...
+        todo!()
     }
 }
 ```
 
-Due to the nature of dynamically sized types, the resulting value has to be
-built on the heap. For safety reasons we currently only allow returning `Box`,
-though in a future version we may also allow `Rc` and `Arc`. In the meantime it
-is posible to use `Arc::from(MyDynamicType::new(...))`.
+Due to the nature of dynamically sized types, the resulting value has to be built on the heap. For safety reasons we currently only allow returning `Box`, though in a future version we may also allow `Rc` and `Arc`. In the meantime it is possible to use `Arc::from(MyDynamicType::new(...))`.
+
+## The `DynStruct` datatype
+
+`DynStruct` is a generic type which can take on the shape of any DST which has `#[repr(C)]`. It consists of a head (which may be a single value or tuple of your statically-sized fields), and a tail (which may be the DST), and is literally just:
+
+```rust
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DynStruct<Header, Tail: ?Sized> {
+    pub header: Header,
+    pub tail: Tail
+}
+```
+
+The key method in `DynStruct` is `DynStruct::transmute`, which allows you to marshal this into any dynamically-sized structure. This is an unsafe but easy way to create safe constructors for your own DSTs:
+
+```rust
+# use dyn_struct2::{DynStruct, DynArg};
+#
+# #[repr(C)]
+# struct MyDynamicType {
+#     pub awesome: bool,
+#     pub number: u32,
+#     pub dynamic: [u32],
+# }
+
+impl MyDynamicType {
+    pub fn new(awesome: bool, number: u32, dynamic: DynArg<[u32]>) -> Box<MyDynamicType> {
+        // This is the actual generated body of MyDynamicType if you use #[derive(DynStruct)]!
+        let dyn_struct = DynStruct::new((awesome, number), dynamic);
+        unsafe { dyn_struct.transmute() }
+    }
+}
+```
+
+## `DynArg`
+
+`DynArg` is a wrapper for dynamically-sized types so that you can consume them and pass them as arguments to a function. You create a `DynArg` with the macro `dyn_arg!(arg)`.
+
+Once you call `dyn_arg!(arg)`, `arg` is effectively consumed. However it is not dropped unless you pass the `dyn_arg` to a `DynStruct` constructor, and then drop the constructed value. If you just ignore the `dyn_arg` then `arg` will leak, which is technically safe behavior but be aware.

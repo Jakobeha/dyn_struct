@@ -5,7 +5,9 @@
 #![feature(coerce_unsized)]
 #![feature(unsize)]
 
-pub mod dyn_arg;
+mod dyn_arg;
+
+pub use dyn_arg::*;
 
 #[cfg(feature = "derive")]
 pub use dyn_struct_derive2::DynStruct;
@@ -13,10 +15,9 @@ pub use dyn_struct_derive2::DynStruct;
 use std::mem::{align_of, size_of};
 use std::ptr::{addr_of_mut, null_mut, Pointee};
 use transmute::transmute;
-use crate::dyn_arg::DynArg;
 
 #[repr(C)]
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DynStruct<Header, Tail: ?Sized> {
     pub header: Header,
     pub tail: Tail,
@@ -115,7 +116,7 @@ impl<Header, Tail: ?Sized> DynStruct<Header, Tail> {
 mod tests {
     use std::fmt::Display;
     use std::rc::Rc;
-    use crate::dyn_arg::dyn_arg;
+    use crate::dyn_arg;
     use super::*;
 
     #[test]
