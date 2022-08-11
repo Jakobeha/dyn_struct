@@ -1,6 +1,6 @@
 [package]
 name = "dyn_struct_derive2"
-version = "0.3.0"
+version = "0.1.0"
 edition = "2018"
 authors = ["Jakob Hain <jakobeha@fastmail.com>", "Christofer Nolander <christofer.nolander@gmail.com>"]
 repository = "https://github.com/Jakobeha/dyn_struct"
